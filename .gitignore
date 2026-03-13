@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+
+data/private/*
+!data/private/.gitkeep
+
+data/output/*
+!data/output/.gitkeep
+
+ManaBox_Collection_Final_20260312.csv
+MTG_collection_enriched_20260313.csv
+
