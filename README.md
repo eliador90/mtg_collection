@@ -140,12 +140,84 @@ python src/analyze_collection.py \
   --output-dir data/output/analysis
 ```
 
+### 5. Generate an interactive deck viewer
+
+The deck viewer renders a standalone HTML page for a deck JSON plus an enriched collection CSV.
+
+Example:
+
+```bash
+python src/generate_deck_viewer.py \
+  --deck data/sample/deck_viewer_sample_deck.json \
+  --collection data/sample/collection_enriched_sample.csv \
+  --output data/output/sample_deck_viewer.html
+```
+
+The generated HTML includes:
+
+- grouped deck list sections
+- card image/detail panel with Scryfall and Cardmarket links
+- mana curve and color overview
+- legality warnings against the commander's color identity
+- optional upgrade suggestions, maybeboard notes, and cut candidates
+
+#### Deck JSON format
+
+The viewer expects a JSON document like:
+
+```json
+{
+  "name": "Deck Name",
+  "commander": {
+    "name": "Commander Name",
+    "category": "Commander",
+    "mana_cost": "{1}{U}",
+    "type_line": "Legendary Creature — Example",
+    "oracle_text": "Rules text here.",
+    "color_identity": "U"
+  },
+  "refinement": {
+    "upgrade_suggestions": [
+      {
+        "cut": "Current Card",
+        "add": "Suggested Card",
+        "reason": "Why this swap improves the deck."
+      }
+    ],
+    "maybeboard": [
+      {
+        "name": "Optional Card",
+        "reason": "Why you may want to test it."
+      }
+    ],
+    "cut_candidates": [
+      {
+        "name": "Flexible Slot",
+        "reason": "Why this is a reasonable cut later."
+      }
+    ]
+  },
+  "cards": [
+    { "name": "Card A", "category": "Creatures" },
+    { "name": "Island", "category": "Lands", "count": 6 }
+  ]
+}
+```
+
+Notes:
+
+- `refinement` is optional.
+- `count` defaults to `1`.
+- For accurate legality and color analysis, include the commander `color_identity` in the JSON.
+- Cards should be present in the enriched collection CSV if you want local metadata immediately. Missing upgrade suggestions can still hydrate from Scryfall at runtime.
+
 ## Sample Files
 
 Public sample files live in `data/sample/`.
 
 - `manabox_collection_sample.csv` is a tiny ManaBox-style example
 - `collection_enriched_sample.csv` is a tiny enriched example for testing downstream scripts without your real collection
+- `deck_viewer_sample_deck.json` is a tiny public sample deck for the interactive viewer
 
 Example commands with sample data:
 

@@ -1,0 +1,33 @@
+{
+  "name": "Shorikai Sample Viewer Deck",
+  "commander": {
+    "name": "Shorikai, Genesis Engine",
+    "category": "Commander",
+    "mana_cost": "{2}{W/U}{W/U}",
+    "type_line": "Legendary Artifact — Vehicle",
+    "oracle_text": "{1}, {T}: Draw two cards, then discard a card. Create a 1/1 colorless Pilot creature token with \"This creature crews Vehicles as though its power were 2 greater.\" Shorikai, Genesis Engine can be your commander.",
+    "color_identity": "W, U",
+    "scryfall_url": "https://scryfall.com/search?q=%21%22Shorikai%2C%20Genesis%20Engine%22"
+  },
+  "refinement": {
+    "upgrade_suggestions": [
+      {
+        "cut": "Sol Ring",
+        "add": "Smuggler's Copter",
+        "reason": "This sample suggestion shows how upgrade paths render in the viewer. Public users can replace it with real ideas for their own decks."
+      }
+    ],
+    "maybeboard": [
+      {
+        "name": "Arcane Signet",
+        "reason": "Simple sample note to demonstrate optional refinement sections."
+      }
+    ]
+  },
+  "cards": [
+    { "name": "Sol Ring", "category": "Artifacts / Enchantments" },
+    { "name": "Arcane Signet", "category": "Artifacts / Enchantments" },
+    { "name": "Giada, Font of Hope", "category": "Creatures" },
+    { "name": "Krenko, Tin Street Kingpin", "category": "Creatures" }
+  ]
+}
