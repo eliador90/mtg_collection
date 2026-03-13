@@ -2,6 +2,8 @@
 
 Python tools for analyzing a Magic: The Gathering collection exported from ManaBox, with a focus on Commander deckbuilding workflows.
 
+License: MIT. See [LICENSE](LICENSE).
+
 ## Project Overview
 
 This repository helps you:
@@ -63,26 +65,32 @@ That makes the repository much safer to publish on GitHub without uploading your
 
 ## Setup
 
+### Ubuntu / WSL (recommended)
+
 Create and activate a virtual environment:
 
-```powershell
-python -m venv .venv
-.venv\Scripts\Activate.ps1
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
 ```
 
 Install dependencies:
 
-```powershell
+```bash
 pip install -r requirements.txt
 ```
 
-Optional EDHREC support:
+### Windows PowerShell
+
+If you work in PowerShell instead of Ubuntu/WSL, create a separate Windows virtual environment:
 
 ```powershell
-pip install pyedhrec
+python -m venv .venv
+. .\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
 ```
 
-`pyedhrec` is not included in `requirements.txt` because EDHREC enrichment is optional and may be unreliable.
+Do not share the same `.venv` between Ubuntu/WSL and Windows PowerShell. Create it inside the environment you plan to use.
 
 ## Input Expectations
 
@@ -96,18 +104,18 @@ The Scryfall enrichment script expects a ManaBox CSV with at least these columns
 
 ### 1. Enrich a ManaBox export with Scryfall
 
-```powershell
-python src\enrich_scryfall.py `
-  --input data\private\ManaBox_Collection_Final_20260312.csv `
-  --output data\output\collection_enriched.csv
+```bash
+python src/enrich_scryfall.py \
+  --input data/private/ManaBox_Collection_Final_20260312.csv \
+  --output data/output/collection_enriched.csv
 ```
 
 ### 2. Optionally enrich commander candidates with EDHREC data
 
-```powershell
-python src\enrich_edhrec_optional.py `
-  --input data\output\collection_enriched.csv `
-  --output data\output\collection_enriched_with_edhrec.csv
+```bash
+python src/enrich_edhrec_optional.py \
+  --input data/output/collection_enriched.csv \
+  --output data/output/collection_enriched_with_edhrec.csv
 ```
 
 Notes:
@@ -118,18 +126,18 @@ Notes:
 
 ### 3. Identify likely commanders in the collection
 
-```powershell
-python src\identify_commanders.py `
-  --input data\output\collection_enriched.csv `
-  --output data\output\commander_candidates.csv
+```bash
+python src/identify_commanders.py \
+  --input data/output/collection_enriched.csv \
+  --output data/output/commander_candidates.csv
 ```
 
 ### 4. Analyze the collection
 
-```powershell
-python src\analyze_collection.py `
-  --input data\output\collection_enriched.csv `
-  --output-dir data\output\analysis
+```bash
+python src/analyze_collection.py \
+  --input data/output/collection_enriched.csv \
+  --output-dir data/output/analysis
 ```
 
 ## Sample Files
@@ -141,15 +149,19 @@ Public sample files live in `data/sample/`.
 
 Example commands with sample data:
 
-```powershell
-python src\identify_commanders.py `
-  --input data\sample\collection_enriched_sample.csv `
-  --output data\output\sample_commanders.csv
+```bash
+python src/identify_commanders.py \
+  --input data/sample/collection_enriched_sample.csv \
+  --output data/output/sample_commanders.csv
 
-python src\analyze_collection.py `
-  --input data\sample\collection_enriched_sample.csv `
-  --output-dir data\output\sample_analysis
+python src/analyze_collection.py \
+  --input data/sample/collection_enriched_sample.csv \
+  --output-dir data/output/sample_analysis
 ```
+
+### Windows path note
+
+If you prefer PowerShell, use backslashes in paths and the PowerShell activation command instead. The script arguments are otherwise the same.
 
 ## Notes for GitHub Publication
 
@@ -160,7 +172,10 @@ Before pushing this repository:
 3. Review any sample files to make sure they are safe to publish.
 4. Commit only source code, documentation, and safe sample files.
 
+## License
+
+This project is released under the MIT License. See `LICENSE`.
+
 ## Roadmap
 
 This first version focuses on clean structure and reusable scripts. Future iterations can add stronger Commander-specific logic, better deck support metrics, and deck generation helpers.
-
