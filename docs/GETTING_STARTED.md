@@ -73,46 +73,88 @@ mtg-collection build \
   --theme "suspend big spells"
 ```
 
+Theme hints are plain text. They are not a fixed command list. Use short phrases with card-game words, such as:
+
+- `artifact tokens`
+- `graveyard recursion`
+- `instant speed control`
+- `angel lifegain`
+- `faerie tempo`
+
+The local builder uses these words as scoring hints, so direct phrases work better than long natural-language requests.
+
 This creates:
 
-- `data/output/<commander>_deck.json`
-- `data/output/<commander>_deck.html`
-- `data/output/<commander>_ai_prompt.md`
-- `data/output/<commander>_validation.txt`
+- `data/output/<commander_and_theme>/<commander_and_theme>_deck.json`
+- `data/output/<commander_and_theme>/<commander_and_theme>_deck.html`
+- `data/output/<commander_and_theme>/<commander_and_theme>_ai_prompt.md`
+- `data/output/<commander_and_theme>/<commander_and_theme>_validation.txt`
+- `data/output/<commander_and_theme>/<commander_and_theme>_next_steps.txt`
 
 Open the `.html` file in your browser.
+
+The deck JSON file is the project's working deck file. The viewer, review command, export command, and manual AI workflow all use it.
+
+Simple file guide:
+
+- `_deck.json`: use this in commands
+- `_deck.html`: open this in your browser
+- `_ai_prompt.md`: paste this into Codex, Claude Code, ChatGPT, Claude, or another assistant
+- `_tuning.json`: created by review and stores suggested swaps
+- `_next_steps.txt`: exact follow-up commands for this deck
 
 ## Step 5: Keep Working
 
 Ask for possible swaps:
 
 ```bash
-mtg-collection review --deck data/output/my_deck_deck.json
+mtg-collection review --folder data/output/my_deck
+```
+
+This also updates the deck HTML file, so you can review suggested swaps in the browser viewer.
+
+If you prefer, you can still point directly at the deck JSON:
+
+```bash
+mtg-collection review --deck data/output/my_deck/my_deck_deck.json
 ```
 
 Export to ManaBox:
 
 ```bash
-mtg-collection export --deck data/output/my_deck_deck.json --format manabox
+mtg-collection export --folder data/output/my_deck --format manabox
 ```
 
 Export to plain text:
 
 ```bash
-mtg-collection export --deck data/output/my_deck_deck.json --format text
+mtg-collection export --folder data/output/my_deck --format text
 ```
 
 ## Optional AI Help
 
 The build command creates an AI prompt file. You can paste that prompt into Codex, Claude Code, ChatGPT, Claude, or another assistant.
 
+The prompt includes a filtered candidate pool from your collection. If you want the assistant to inspect the whole collection, upload the enriched CSV manually too. Only do that if you are comfortable sharing it with that assistant.
+
 After saving an AI-refined deck JSON, compare it to the original:
 
 ```bash
 mtg-collection review \
-  --deck data/output/my_deck_refined_deck.json \
-  --compare-to data/output/my_deck_deck.json
+  --deck data/output/my_deck_refined/my_deck_refined_deck.json \
+  --compare-to data/output/my_deck/my_deck_deck.json
 ```
+
+You can also opt into direct OpenAI API generation:
+
+```bash
+mtg-collection build \
+  --commander "Jhoira of the Ghitu" \
+  --theme "suspend big spells" \
+  --provider openai
+```
+
+This requires `OPENAI_API_KEY` and may cost money through the OpenAI API.
 
 ## Common Problems
 

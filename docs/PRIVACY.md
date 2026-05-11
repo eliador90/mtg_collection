@@ -46,19 +46,23 @@ Prompt files generated with `--prompt-output` can include:
 
 They are useful, but they may reveal parts of your collection. Keep them in `data/output/` unless you intentionally want to share them.
 
-The one-command deck builder creates prompt files automatically unless you pass `--no-prompt`.
+The deck build command creates prompt files automatically unless you pass `--no-prompt`.
 
 ## Sample Data
 
 Public examples should be tiny and synthetic. Do not copy your real collection into `data/sample/`.
 
-## Future API Features
+## API Features
 
-The current project does not call paid AI APIs.
+The default workflow is local and does not call paid AI APIs.
 
-If API-based generation is added later, it should:
+If you use `--provider openai`, the project sends collection-derived deckbuilding context to OpenAI. That includes:
 
-- send only a filtered candidate pool, not the full raw collection
-- clearly explain what is sent to the provider
-- keep API keys out of Git
-- make networked AI generation opt-in
+- commander details
+- the local draft deck JSON
+- selected candidate cards from the enriched collection
+- theme hint, if provided
+
+The project does not intentionally send the full raw ManaBox CSV, but candidate cards can still reveal parts of your collection.
+
+API keys should stay in environment variables such as `OPENAI_API_KEY`. Do not put real keys in Git.

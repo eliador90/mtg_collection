@@ -841,14 +841,14 @@ def write_deck_json(deck: dict, output_path: str) -> None:
     path.write_text(json.dumps(deck, indent=2), encoding="utf-8")
 
 
-def write_ai_prompt(result: DeckGenerationResult, output_path: str) -> None:
+def write_ai_prompt(result: DeckGenerationResult, output_path: str, collection_path: str = "") -> None:
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    prompt = build_ai_prompt(result)
+    prompt = build_ai_prompt(result, collection_path=collection_path)
     path.write_text(prompt, encoding="utf-8")
 
 
-def build_ai_prompt(result: DeckGenerationResult) -> str:
+def build_ai_prompt(result: DeckGenerationResult, collection_path: str = "") -> str:
     deck = result.deck
     commander = deck["commander"]
     candidates_by_role = group_candidates_for_prompt(result.candidate_pool)
@@ -870,6 +870,11 @@ Commander:
 Task:
 Refine the draft deck below using only cards from the candidate pool unless you explicitly put outside cards in upgrade_suggestions.
 Return JSON in the same deck format. Keep the commander legal, keep Commander color identity legal, and explain important changes in refinement.
+
+Collection context:
+The candidate pool below is a filtered slice of the user's collection, not necessarily the whole CSV.
+{f"The enriched collection file used by the tool was: {collection_path}" if collection_path else "The full collection CSV path was not provided in this prompt."}
+If the user manually uploads the full enriched collection CSV, you may use it to search for additional owned cards. If no CSV is uploaded, use only the candidate pool below.
 
 Current local draft JSON:
 ```json

@@ -27,7 +27,7 @@ ManaBox CSV
   -> build_commander_deck.py
   -> validate_deck.py
   -> optional tune_deck.py / compare_decks.py
-  -> optional manual AI refinement or future API provider
+  -> optional manual AI refinement or OpenAI provider
   -> generate_deck_viewer.py
 ```
 
@@ -102,7 +102,7 @@ Checks a deck JSON against an enriched collection CSV:
 
 Suggests reviewable swaps for an existing deck JSON. It uses the same local scoring ideas as deck generation, looks at validation warnings, and proposes cards from the enriched collection.
 
-This command intentionally does not edit the deck automatically. It produces a printed report and, optionally, a JSON report so users can decide which changes they want.
+The lower-level command produces a printed report and, optionally, a JSON report. The beginner `mtg-collection review` wrapper also writes those suggestions into the deck JSON and regenerates the viewer so users can inspect the swaps visually.
 
 ### `src/compare_decks.py`
 
@@ -117,18 +117,20 @@ This is useful after manual edits or AI-assisted refinement.
 
 ### `src/deck_providers.py`
 
-Provider interface for local and future AI-backed deck drafting.
+Provider interface for local and AI-backed deck drafting.
 
-Current provider:
+Current providers:
 
 - `local`
+- `openai`
 
 Planned extension points:
 
-- `openai`
 - `anthropic`
 - `openrouter`
 - `ollama`
+
+The OpenAI provider builds the normal local draft first, sends that focused draft and candidate pool to the OpenAI Responses API, parses returned deck JSON, and then uses the same validation and viewer pipeline as local generation.
 
 ### `src/deck_io.py`
 
@@ -154,7 +156,7 @@ This avoids API cost:
 6. Validate it.
 7. Run the viewer.
 
-## Future API Provider Workflow
+## API Provider Workflow
 
 API-based generation should reuse the same pipeline:
 
@@ -196,7 +198,7 @@ A validator should run after both local and AI generation. It should check:
 - all main-deck cards are either in the collection or intentionally marked as external upgrades
 - required deck JSON keys are present
 
-The validator is now the stricter gate before publishing API-based generation. Future provider adapters should run generated JSON through the validator before rendering or recommending it.
+The validator is the gate for both local and API-based generation. Future non-OpenAI provider adapters should run generated JSON through the validator before rendering or recommending it.
 
 The HTML viewer renders `refinement.validation_report` when present, so users can see errors and warnings without opening the text report separately.
 

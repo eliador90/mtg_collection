@@ -9,12 +9,13 @@ from pathlib import Path
 import pandas as pd
 
 from analyze_collection import build_color_distribution, build_summary, build_type_distribution
-from build_commander_deck import build_commander_deck, slugify
+from build_commander_deck import build_commander_deck, build_output_folder
 from deck_diff import compare_decks, format_diff_report, write_diff_json
 from deck_io import export_deck_to_manabox_csv, import_manabox_deck_csv
 from deck_providers import provider_names
 from deck_text_export import export_deck_to_text
-from deck_tuning import format_tuning_report, tune_deck
+from deck_tuning import attach_tuning_report, format_tuning_report, tune_deck
+from generate_deck_viewer import build_deck_cards, load_collection_lookup, render_html
 from mtg_collection_utils import (
     REQUIRED_MANABOX_COLUMNS,
     build_commander_candidate_table,
@@ -53,15 +54,16 @@ def parse_args() -> argparse.Namespace:
     build.add_argument("--commander", required=True, help="Commander name to build around.")
     build.add_argument("--collection", default=DEFAULT_COLLECTION_PATH, help="Enriched collection CSV.")
     build.add_argument("--output-dir", default=DEFAULT_OUTPUT_DIR, help="Output directory. Defaults to data/output.")
-    build.add_argument("--name", default="", help="Optional filename stem. Defaults to the commander name.")
+    build.add_argument("--name", default="", help="Optional output folder name. Defaults to commander plus theme.")
     build.add_argument("--theme", default="", help="Optional theme hint, such as 'suspend big spells'.")
+    build.add_argument("--model", default="", help="Optional API model name. Only used with API providers such as openai.")
     build.add_argument("--target-size", type=int, default=100, help="Deck size including commander. Defaults to 100.")
     build.add_argument("--land-count", type=int, default=None, help="Optional exact land count.")
     build.add_argument(
         "--provider",
         default="local",
         choices=provider_names(),
-        help="Deck provider. Beginners should leave this as local.",
+        help="Deck provider. Defaults to local. OpenAI is optional and requires OPENAI_API_KEY.",
     )
     build.add_argument("--no-viewer", action="store_true", help="Skip HTML viewer generation.")
     build.add_argument("--no-prompt", action="store_true", help="Skip AI-ready prompt generation.")
@@ -71,20 +73,23 @@ def parse_args() -> argparse.Namespace:
     build.set_defaults(func=run_build)
 
     review = subparsers.add_parser("review", help="Review a deck with tuning suggestions and optional comparison.")
-    review.add_argument("--deck", required=True, help="Deck JSON to review.")
+    review.add_argument("--deck", default="", help="Deck JSON to review.")
+    review.add_argument("--folder", default="", help="Deck output folder. The command will find the deck JSON inside it.")
     review.add_argument("--collection", default=DEFAULT_COLLECTION_PATH, help="Enriched collection CSV.")
-    review.add_argument("--output", default="", help="JSON tuning report output. Defaults to data/output/<deck>_tuning.json.")
+    review.add_argument("--output", default="", help="JSON tuning report output. Defaults next to the deck JSON.")
     review.add_argument("--max-suggestions", type=int, default=10, help="Maximum number of swaps to suggest.")
     review.add_argument("--theme", default="", help="Optional theme hint to guide tuning.")
     review.add_argument("--compare-to", default="", help="Optional older deck JSON to compare against.")
     review.add_argument("--diff-output", default="", help="Optional JSON diff report output.")
+    review.add_argument("--no-update-viewer", action="store_true", help="Do not write suggestions into the deck JSON or regenerate the viewer.")
     review.set_defaults(func=run_review)
 
     export = subparsers.add_parser("export", help="Export a deck to ManaBox CSV or plain text.")
-    export.add_argument("--deck", required=True, help="Deck JSON to export.")
+    export.add_argument("--deck", default="", help="Deck JSON to export.")
+    export.add_argument("--folder", default="", help="Deck output folder. The command will find the deck JSON inside it.")
     export.add_argument("--format", choices=["manabox", "text"], default="manabox", help="Export format.")
     export.add_argument("--collection", default=DEFAULT_COLLECTION_PATH, help="Enriched collection CSV for ManaBox metadata.")
-    export.add_argument("--output", default="", help="Output file. Defaults to data/output based on the deck name.")
+    export.add_argument("--output", default="", help="Output file. Defaults next to the deck JSON.")
     export.add_argument("--no-categories", action="store_true", help="For text export, write one flat list.")
     export.set_defaults(func=run_export)
 
@@ -143,9 +148,9 @@ def run_commanders(args: argparse.Namespace) -> int:
 
 
 def run_build(args: argparse.Namespace) -> int:
-    stem = args.name or slugify(args.commander)
-    output_dir = Path(args.output_dir)
-    manabox_output = str(output_dir / f"{stem}_manabox.csv") if args.manabox else ""
+    deck_dir = build_output_folder(args.output_dir, args.commander, args.theme, args.name)
+    stem = deck_dir.name
+    manabox_output = str(deck_dir / f"{stem}_manabox.csv") if args.manabox else ""
     build_args = argparse.Namespace(
         commander=args.commander,
         collection=args.collection,
@@ -154,6 +159,7 @@ def run_build(args: argparse.Namespace) -> int:
         target_size=args.target_size,
         land_count=args.land_count,
         theme=args.theme,
+        model=args.model,
         provider=args.provider,
         no_viewer=args.no_viewer,
         no_prompt=args.no_prompt,
@@ -161,20 +167,21 @@ def run_build(args: argparse.Namespace) -> int:
         manabox_output=manabox_output,
     )
     exit_code = build_commander_deck(build_args)
-    deck_path = output_dir / f"{stem}_deck.json"
+    deck_path = deck_dir / f"{stem}_deck.json"
     if args.text:
-        text_path = output_dir / f"{stem}_decklist.txt"
+        text_path = deck_dir / f"{stem}_decklist.txt"
         export_deck_to_text(str(deck_path), str(text_path))
         print(f"Saved plain text decklist to: {text_path}")
     if not args.no_viewer:
-        print(f"Open this file in your browser: {output_dir / f'{stem}_deck.html'}")
+        print(f"Open this file in your browser: {deck_dir / f'{stem}_deck.html'}")
     return exit_code
 
 
 def run_review(args: argparse.Namespace) -> int:
-    output_path = args.output or default_output_for_deck(args.deck, "_tuning.json")
+    deck_path = resolve_deck_path(args.deck, args.folder)
+    output_path = args.output or default_output_for_deck(deck_path, "_tuning.json")
     report = tune_deck(
-        deck_path=args.deck,
+        deck_path=deck_path,
         collection_path=args.collection,
         output_path=output_path,
         max_suggestions=args.max_suggestions,
@@ -183,9 +190,15 @@ def run_review(args: argparse.Namespace) -> int:
     print(format_tuning_report(report))
     print(f"Saved tuning report to: {output_path}")
 
+    if not args.no_update_viewer:
+        attach_tuning_report(deck_path, report)
+        viewer_path = render_viewer_for_deck(deck_path, args.collection)
+        print(f"Updated deck JSON with tuning suggestions: {deck_path}")
+        print(f"Updated deck viewer: {viewer_path}")
+
     if args.compare_to:
-        diff_output = args.diff_output or default_output_for_deck(args.deck, "_diff.json")
-        diff_report = compare_decks(args.compare_to, args.deck)
+        diff_output = args.diff_output or default_output_for_deck(deck_path, "_diff.json")
+        diff_report = compare_decks(args.compare_to, deck_path)
         print("")
         print(format_diff_report(diff_report))
         write_diff_json(diff_report, diff_output)
@@ -194,12 +207,13 @@ def run_review(args: argparse.Namespace) -> int:
 
 
 def run_export(args: argparse.Namespace) -> int:
-    output_path = args.output or default_export_output(args.deck, args.format)
+    deck_path = resolve_deck_path(args.deck, args.folder)
+    output_path = args.output or default_export_output(deck_path, args.format)
     if args.format == "manabox":
-        export_deck_to_manabox_csv(args.deck, output_path, collection_path=args.collection)
+        export_deck_to_manabox_csv(deck_path, output_path, collection_path=args.collection)
         print(f"Saved ManaBox-style CSV to: {output_path}")
     else:
-        export_deck_to_text(args.deck, output_path, include_categories=not args.no_categories)
+        export_deck_to_text(deck_path, output_path, include_categories=not args.no_categories)
         print(f"Saved plain text decklist to: {output_path}")
     return 0
 
@@ -265,12 +279,66 @@ def print_next_steps(commanders_path: Path) -> None:
 
 def default_output_for_deck(deck_path: str, suffix: str) -> str:
     path = Path(deck_path)
-    return str(Path(DEFAULT_OUTPUT_DIR) / f"{path.stem}{suffix}")
+    base = deck_base_from_path(path)
+    return str(path.with_name(f"{base}{suffix}"))
 
 
 def default_export_output(deck_path: str, export_format: str) -> str:
+    path = Path(deck_path)
+    base = deck_base_from_path(path)
     suffix = "_manabox.csv" if export_format == "manabox" else "_decklist.txt"
-    return default_output_for_deck(deck_path, suffix)
+    return str(path.with_name(f"{base}{suffix}"))
+
+
+def render_viewer_for_deck(deck_path: str, collection_path: str) -> Path:
+    path = Path(deck_path)
+    output_path = path.with_name(f"{deck_base_from_path(path)}_deck.html")
+    collection_lookup = load_collection_lookup(collection_path)
+    deck_name, cards, refinement = build_deck_cards(deck_path, collection_lookup)
+    output_path.write_text(render_html(deck_name, cards, refinement), encoding="utf-8")
+    return output_path
+
+
+def deck_base_from_path(path: Path) -> str:
+    if path.name == "deck.json":
+        return path.parent.name
+    if path.name.endswith("_deck.json"):
+        return path.name[: -len("_deck.json")]
+    return path.stem
+
+
+def resolve_deck_path(deck: str = "", folder: str = "") -> str:
+    if deck and folder:
+        raise ValueError("Use either --deck or --folder, not both.")
+    if deck:
+        path = Path(deck)
+        if not path.exists():
+            raise FileNotFoundError(f"Deck JSON not found: {path}")
+        return str(path)
+    if not folder:
+        raise ValueError("Provide --deck path/to/deck.json or --folder path/to/deck_folder.")
+
+    folder_path = Path(folder)
+    if not folder_path.exists():
+        raise FileNotFoundError(f"Deck folder not found: {folder_path}")
+    if not folder_path.is_dir():
+        raise ValueError(f"--folder must point to a deck folder, not a file: {folder_path}")
+
+    expected = folder_path / f"{folder_path.name}_deck.json"
+    if expected.exists():
+        return str(expected)
+
+    legacy = folder_path / "deck.json"
+    if legacy.exists():
+        return str(legacy)
+
+    candidates = sorted(folder_path.glob("*_deck.json"))
+    if len(candidates) == 1:
+        return str(candidates[0])
+    if not candidates:
+        raise FileNotFoundError(f"No deck JSON found in folder: {folder_path}")
+    names = ", ".join(path.name for path in candidates)
+    raise ValueError(f"Multiple deck JSON files found in {folder_path}: {names}. Use --deck to choose one.")
 
 
 def main() -> int:

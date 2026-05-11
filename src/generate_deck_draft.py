@@ -35,8 +35,9 @@ def parse_args() -> argparse.Namespace:
         "--provider",
         default="local",
         choices=provider_names(),
-        help="Deck draft provider. Only 'local' is implemented today; API providers are planned extension points.",
+        help="Deck draft provider. Defaults to local. OpenAI is optional and requires OPENAI_API_KEY.",
     )
+    parser.add_argument("--model", default="", help="Optional API model name. Only used by API providers such as openai.")
     parser.add_argument(
         "--prompt-output",
         default="",
@@ -59,6 +60,7 @@ def main() -> None:
         target_size=args.target_size,
         land_count=args.land_count,
         theme=args.theme,
+        model=args.model,
     )
     result = provider.draft_deck(request)
 
@@ -67,7 +69,7 @@ def main() -> None:
     print(f"Saved deck JSON to: {args.output}")
 
     if args.prompt_output:
-        write_ai_prompt(result, args.prompt_output)
+        write_ai_prompt(result, args.prompt_output, collection_path=args.collection)
         print(f"Saved AI-ready prompt to: {args.prompt_output}")
 
     if args.viewer_output:

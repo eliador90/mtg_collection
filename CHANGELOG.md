@@ -6,6 +6,11 @@ This project does not have formal releases yet. Notable changes are tracked here
 
 - Added beginner-friendly `mtg-collection` workflow command with `scan`, `build`, `review`, `export`, `import-deck`, and `privacy-check` subcommands.
 - Simplified beginner documentation and moved lower-level commands into advanced docs.
+- Added minimal OpenAI API deck provider behind `--provider openai`.
+- Added clearer documentation for theme hints and API privacy/cost behavior.
+- Grouped deck build outputs into one folder per commander/theme.
+- Updated review workflow so tuning suggestions can be written into `deck.json` and shown in the HTML viewer.
+- Added collection-context guidance to generated AI prompts.
 - Added local first-pass Commander deck generation.
 - Added deck validation with errors and deck-shape warnings.
 - Added validation and draft quality notes to generated deck viewers.

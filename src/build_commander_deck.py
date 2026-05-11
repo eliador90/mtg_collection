@@ -26,16 +26,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--name",
         default="",
-        help="Optional filename stem. Defaults to a slug based on the commander name.",
+        help="Optional output folder name. Defaults to commander plus theme.",
     )
     parser.add_argument("--target-size", type=int, default=100, help="Deck size including commander. Defaults to 100.")
     parser.add_argument("--land-count", type=int, default=None, help="Optional exact land count.")
     parser.add_argument("--theme", default="", help="Optional theme hint, such as 'suspend big spells'.")
+    parser.add_argument("--model", default="", help="Optional API model name. Only used by API providers such as openai.")
     parser.add_argument(
         "--provider",
         default="local",
         choices=provider_names(),
-        help="Deck draft provider. Only 'local' is implemented today; API providers are planned extension points.",
+        help="Deck draft provider. Defaults to local. OpenAI is optional and requires OPENAI_API_KEY.",
     )
     parser.add_argument("--no-viewer", action="store_true", help="Skip HTML viewer generation.")
     parser.add_argument("--no-prompt", action="store_true", help="Skip AI-ready prompt generation.")
@@ -54,14 +55,15 @@ def main() -> int:
 
 
 def build_commander_deck(args: argparse.Namespace) -> int:
-    output_dir = Path(args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    stem = args.name or slugify(args.commander)
+    deck_dir = build_output_folder(args.output_dir, args.commander, args.theme, args.name)
+    deck_dir.mkdir(parents=True, exist_ok=True)
+    stem = deck_dir.name
 
-    deck_path = output_dir / f"{stem}_deck.json"
-    viewer_path = output_dir / f"{stem}_deck.html"
-    prompt_path = output_dir / f"{stem}_ai_prompt.md"
-    validation_path = output_dir / f"{stem}_validation.txt"
+    deck_path = deck_dir / f"{stem}_deck.json"
+    viewer_path = deck_dir / f"{stem}_deck.html"
+    prompt_path = deck_dir / f"{stem}_ai_prompt.md"
+    validation_path = deck_dir / f"{stem}_validation.txt"
+    next_steps_path = deck_dir / f"{stem}_next_steps.txt"
 
     provider = create_provider(args.provider)
     request = DeckDraftRequest(
@@ -70,6 +72,7 @@ def build_commander_deck(args: argparse.Namespace) -> int:
         target_size=args.target_size,
         land_count=args.land_count,
         theme=args.theme,
+        model=args.model,
     )
     result = provider.draft_deck(request)
 
@@ -95,7 +98,7 @@ def build_commander_deck(args: argparse.Namespace) -> int:
         validation_path.write_text(formatted_report + "\n", encoding="utf-8")
 
     if not args.no_prompt:
-        write_ai_prompt(result, str(prompt_path))
+        write_ai_prompt(result, str(prompt_path), collection_path=args.collection)
         print(f"Saved AI-ready prompt to: {prompt_path}")
 
     if not args.no_viewer:
@@ -108,6 +111,17 @@ def build_commander_deck(args: argparse.Namespace) -> int:
         export_deck_to_manabox_csv(str(deck_path), args.manabox_output, collection_path=args.collection)
         print(f"Saved ManaBox-style CSV to: {args.manabox_output}")
 
+    write_next_steps_file(
+        next_steps_path=next_steps_path,
+        deck_dir=deck_dir,
+        deck_path=deck_path,
+        viewer_path=viewer_path if not args.no_viewer else None,
+        prompt_path=prompt_path if not args.no_prompt else None,
+        collection_path=args.collection,
+        theme=args.theme,
+    )
+    print(f"Saved next steps to: {next_steps_path}")
+
     if args.no_validate:
         return 0
     print(formatted_report)
@@ -118,6 +132,59 @@ def build_commander_deck(args: argparse.Namespace) -> int:
 def slugify(text: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_")
     return slug or "commander_deck"
+
+
+def build_output_stem(commander: str, theme: str = "", name: str = "") -> str:
+    if name:
+        return slugify(name)
+    parts = [commander]
+    if theme:
+        parts.append(theme)
+    return slugify(" ".join(parts))
+
+
+def build_output_folder(output_dir: str, commander: str, theme: str = "", name: str = "") -> Path:
+    return Path(output_dir) / build_output_stem(commander, theme, name)
+
+
+def write_next_steps_file(
+    next_steps_path: Path,
+    deck_dir: Path,
+    deck_path: Path,
+    viewer_path: Path | None,
+    prompt_path: Path | None,
+    collection_path: str,
+    theme: str = "",
+) -> None:
+    theme_part = f' --theme "{theme}"' if theme else ""
+    lines = [
+        "Next steps for this deck",
+        "",
+        "Use the deck JSON for commands:",
+        str(deck_path),
+        "",
+        "Find replacement or upgrade ideas from your collection:",
+        f'mtg-collection review --folder "{deck_dir}" --collection "{collection_path}"{theme_part}',
+        "",
+        "Export to ManaBox:",
+        f'mtg-collection export --folder "{deck_dir}" --collection "{collection_path}" --format manabox',
+        "",
+        "Export to plain text:",
+        f'mtg-collection export --folder "{deck_dir}" --format text',
+        "",
+        "File guide:",
+        "- *_deck.json is the working deck file for commands.",
+        "- *_deck.html is the browser viewer.",
+        "- *_ai_prompt.md is the prompt for Codex, Claude Code, ChatGPT, Claude, or another assistant.",
+        "- *_tuning.json is created by review and stores suggested swaps.",
+        "- *_next_steps.txt is this command reminder.",
+    ]
+    if viewer_path is not None:
+        lines[2:2] = ["Open the viewer in your browser:", str(viewer_path), ""]
+    if prompt_path is not None:
+        insert_at = lines.index("File guide:")
+        lines[insert_at:insert_at] = ["Manual AI refinement prompt:", str(prompt_path), ""]
+    next_steps_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

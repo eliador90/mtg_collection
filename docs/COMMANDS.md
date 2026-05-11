@@ -23,19 +23,25 @@ mtg-collection build --commander "Jhoira of the Ghitu" --theme "suspend big spel
 ```
 
 This creates the deck JSON, HTML viewer, validation report, and AI prompt.
+Outputs are grouped in one folder, such as `data/output/jhoira_of_the_ghitu_suspend_big_spells/`.
+The folder also contains `<deck_name>_next_steps.txt` with exact follow-up commands.
+
+`--theme` is a plain-text hint. Good examples are `artifact tokens`, `graveyard recursion`, `instant speed control`, and `angel lifegain`.
 
 ### 3. Review
 
 ```bash
-mtg-collection review --deck data/output/jhoira_of_the_ghitu_deck.json
+mtg-collection review --folder data/output/jhoira_of_the_ghitu_suspend_big_spells
 ```
 
-This suggests possible swaps from your collection. It does not edit your deck automatically.
+This suggests possible swaps from your collection and updates the deck viewer so the swaps can be reviewed visually.
+
+Use `_deck.json` in commands and open `_deck.html` in your browser. The `--folder` option lets the command find the deck JSON automatically.
 
 ### 4. Export
 
 ```bash
-mtg-collection export --deck data/output/jhoira_of_the_ghitu_deck.json --format manabox
+mtg-collection export --folder data/output/jhoira_of_the_ghitu_suspend_big_spells --format manabox
 ```
 
 Use `--format text` for a plain text decklist.
@@ -68,8 +74,8 @@ Compare a refined deck to the original:
 
 ```bash
 mtg-collection review \
-  --deck data/output/jhoira_refined_deck.json \
-  --compare-to data/output/jhoira_of_the_ghitu_deck.json
+  --deck data/output/jhoira_refined/jhoira_refined_deck.json \
+  --compare-to data/output/jhoira_of_the_ghitu_suspend_big_spells/jhoira_of_the_ghitu_suspend_big_spells_deck.json
 ```
 
 Choose a different collection file:
@@ -79,6 +85,17 @@ mtg-collection build \
   --commander "Jhoira of the Ghitu" \
   --collection data/output/another_collection_enriched.csv
 ```
+
+Use the optional OpenAI API provider:
+
+```bash
+mtg-collection build \
+  --commander "Jhoira of the Ghitu" \
+  --theme "suspend big spells" \
+  --provider openai
+```
+
+This requires `OPENAI_API_KEY` and may create API charges. Use `--model` if you want to choose a specific OpenAI model.
 
 ## Advanced Commands
 

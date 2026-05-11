@@ -52,13 +52,22 @@ Deck generation currently supports:
 
 ```bash
 --provider local
+--provider openai
 ```
 
-The project reserves names for future providers:
+OpenAI requires `OPENAI_API_KEY` and may cost money:
 
-- `openai`
+```bash
+mtg-collection build \
+  --commander "Jhoira of the Ghitu" \
+  --provider openai \
+  --model gpt-5.2
+```
+
+The project reserves these names for future providers:
+
 - `anthropic`
 - `openrouter`
 - `ollama`
 
-Those provider names are scaffolding only. API-based deck generation is not implemented yet.
+Those provider names are scaffolding only.

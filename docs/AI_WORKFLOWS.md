@@ -1,106 +1,93 @@
 # AI Workflows
 
-This project supports AI-assisted deckbuilding in two different ways: manual assistant workflows today, and optional API provider workflows later.
+The project supports two AI-assisted workflows.
 
-## Manual AI Workflow
+## Manual Assistant Workflow
 
-This is available now and does not require API billing.
+This does not require API billing.
 
-1. Generate a local deck build with `mtg-collection build`.
-2. Open the generated Markdown prompt.
+1. Build a local deck:
+
+   ```bash
+   mtg-collection build --commander "Jhoira of the Ghitu" --theme "suspend big spells"
+   ```
+
+2. Open the generated `<deck_name>_ai_prompt.md` file in the deck folder under `data/output/`.
 3. Paste it into Codex, Claude Code, ChatGPT, Claude, or another assistant.
 4. Ask for a refined deck JSON in the same format.
 5. Save the refined JSON in `data/output/`.
-6. Compare and review it with `mtg-collection review --compare-to ...`.
-7. Export or render it when you are happy with the result.
+6. Review the changes:
 
-When the deck builder creates a deck, the generated HTML viewer already includes draft quality notes and validation results.
+   ```bash
+   mtg-collection review \
+     --deck data/output/jhoira_refined/jhoira_refined_deck.json \
+     --compare-to data/output/jhoira_of_the_ghitu_suspend_big_spells/jhoira_of_the_ghitu_suspend_big_spells_deck.json
+   ```
 
-Example:
+## OpenAI API Provider
+
+This lets the project call OpenAI directly. It is opt-in and may cost money.
+
+Set an API key:
+
+```bash
+export OPENAI_API_KEY=your_api_key_here
+```
+
+Windows PowerShell:
+
+```powershell
+$env:OPENAI_API_KEY="your_api_key_here"
+```
+
+Then run:
 
 ```bash
 mtg-collection build \
   --commander "Jhoira of the Ghitu" \
-  --name jhoira \
-  --theme "suspend big spells"
+  --theme "suspend big spells" \
+  --provider openai
 ```
 
-This creates `data/output/jhoira_ai_prompt.md`.
-
-After an assistant returns a refined deck file, a typical follow-up is:
+Optional model selection:
 
 ```bash
-mtg-collection review \
-  --deck data/output/jhoira_refined_deck.json \
-  --compare-to data/output/jhoira_deck.json
-```
-
-You can also ask the local tuner for non-AI swap ideas before or after the assistant pass:
-
-```bash
-mtg-collection review --deck data/output/jhoira_deck.json
-```
-
-If you did not install the `mtg-*` commands, use:
-
-```bash
-python src/build_commander_deck.py \
+mtg-collection build \
   --commander "Jhoira of the Ghitu" \
-  --collection data/output/collection_enriched.csv \
-  --name jhoira \
-  --theme "suspend big spells"
+  --provider openai \
+  --model gpt-5.2
 ```
 
-## API-Based AI Workflow
-
-This is planned, not implemented.
-
-API-based generation would let the project call a model provider directly. That would usually require:
-
-- a provider account
-- an API key
-- separate API billing
-
-Normal ChatGPT or Claude subscriptions usually do not include API usage.
-
-The project now has provider scaffolding in `src/deck_providers.py`, but only the `local` provider is implemented. The `openai`, `anthropic`, `openrouter`, and `ollama` names are reserved extension points.
-
-Current provider option:
+You can also set:
 
 ```bash
---provider local
+export OPENAI_MODEL=gpt-5.2
 ```
 
-Reserved future provider names:
+The OpenAI provider first builds the local draft, sends a focused candidate pool and draft prompt to OpenAI, expects deck JSON back, then runs the normal validation and viewer workflow.
 
-```bash
---provider openai
---provider anthropic
---provider openrouter
---provider ollama
-```
+## What Gets Sent
 
-## Recommended Provider Design
+The OpenAI request includes:
 
-Provider integrations should be small adapters around the same local data flow:
+- commander details
+- the local draft deck JSON
+- selected candidate cards from the enriched collection
+- theme hint, if provided
 
-```text
-enriched collection
-  -> local candidate pool
-  -> provider adapter
-  -> deck JSON
-  -> validator
-  -> viewer
-```
+It does not intentionally send your raw ManaBox CSV, but the candidate pool can still reveal cards you own. Use the local or manual workflow if you do not want collection-derived data sent to an API provider.
 
-The local candidate pool should be filtered before sending anything to a provider. That keeps prompts smaller, cheaper, and more private.
+## Current Providers
 
-## User Experience Rules For Future API Features
+Available today:
 
-- Local generation must remain the default.
-- API use must be opt-in.
-- The command should say which provider is being used.
-- The docs should say that provider usage may cost money.
-- API keys should come from environment variables.
-- Generated files should not contain API keys.
-- The project should validate AI output before rendering or recommending it.
+- `local`
+- `openai`
+
+Reserved for future work:
+
+- `anthropic`
+- `openrouter`
+- `ollama`
+
+Normal ChatGPT or Claude subscriptions usually do not include API usage. API providers require separate API keys and billing.

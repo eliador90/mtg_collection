@@ -82,6 +82,24 @@ def tune_deck(
     return report
 
 
+def attach_tuning_report(deck_path: str, report: dict) -> dict:
+    deck = load_deck_json(deck_path)
+    updated = dict(deck)
+    refinement = dict(updated.get("refinement", {}))
+    suggestions = report.get("suggestions", [])
+    refinement["upgrade_suggestions"] = suggestions
+    refinement["tuning_report"] = {
+        "validation_ok": report.get("validation_ok", False),
+        "validation_warnings": report.get("validation_warnings", []),
+        "suggestion_count": len(suggestions),
+    }
+    updated["refinement"] = refinement
+
+    path = Path(deck_path)
+    path.write_text(json.dumps(updated, indent=2), encoding="utf-8")
+    return updated
+
+
 def infer_validation_settings(deck: dict) -> tuple[int, int, int]:
     generation = deck.get("generation", {})
     target_size = parse_positive_int(generation.get("target_size"), default=100)
