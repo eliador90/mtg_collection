@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -e . --no-deps
+
+      - name: Run tests
+        run: python -m unittest discover -s tests
+
+      - name: Compile scripts
+        run: python -m compileall src tests
+
+      - name: Run sample deck generation
+        run: |
+          python src/build_commander_deck.py \
+            --commander "Shorikai, Genesis Engine" \
+            --collection data/sample/collection_enriched_sample.csv \
+            --name sample_generated \
+            --target-size 8 \
+            --manabox-output data/output/sample_generated_manabox.csv
+
+      - name: Check ManaBox-style import
+        run: |
+          python src/import_manabox_deck.py \
+            --input data/output/sample_generated_manabox.csv \
+            --commander "Shorikai, Genesis Engine" \
+            --collection data/sample/collection_enriched_sample.csv \
+            --output data/output/sample_generated_imported.json
+
+      - name: Check deck utility commands
+        run: |
+          python src/export_deck_text.py \
+            --deck data/output/sample_generated_deck.json \
+            --output data/output/sample_generated_decklist.txt
+          python src/compare_decks.py \
+            --old data/output/sample_generated_deck.json \
+            --new data/output/sample_generated_imported.json \
+            --json-output data/output/sample_generated_diff.json
+          python src/tune_deck.py \
+            --deck data/output/sample_generated_deck.json \
+            --collection data/sample/collection_enriched_sample.csv \
+            --output data/output/sample_generated_tuning.json \
+            --max-suggestions 3
+
+      - name: Check beginner wrapper command
+        run: |
+          mtg-collection commanders \
+            --collection data/sample/collection_enriched_sample.csv \
+            --output data/output/sample_wrapper_commanders.csv
+          mtg-collection build \
+            --commander "Shorikai, Genesis Engine" \
+            --collection data/sample/collection_enriched_sample.csv \
+            --name sample_wrapper \
+            --target-size 8 \
+            --no-viewer \
+            --manabox \
+            --text
+          mtg-collection review \
+            --deck data/output/sample_wrapper_deck.json \
+            --collection data/sample/collection_enriched_sample.csv \
+            --max-suggestions 3

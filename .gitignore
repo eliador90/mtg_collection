@@ -2,6 +2,11 @@
 __pycache__/
 .pytest_cache/
 *.pyc
+*.egg-info/
+.env
+.env.*
+.DS_Store
+Thumbs.db
 
 data/private/*
 !data/private/.gitkeep
@@ -9,6 +14,6 @@ data/private/*
 data/output/*
 !data/output/.gitkeep
 
-ManaBox_Collection_Final_20260312.csv
-MTG_collection_enriched_20260313.csv
-
+ManaBox_*.csv
+MTG_collection_*.csv
+*collection_enriched*.csv

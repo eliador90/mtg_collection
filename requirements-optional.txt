@@ -1,0 +1,3 @@
+# Optional EDHREC-style enrichment support.
+# The core project works without this file.
+pyedhrec

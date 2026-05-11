@@ -1,0 +1,81 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mtg-collection-commander-toolkit"
+version = "0.1.0"
+description = "Local Commander-focused tools for ManaBox Magic: The Gathering collection exports."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "MTG Collection Commander Toolkit contributors" }
+]
+keywords = ["magic-the-gathering", "commander", "edh", "manabox", "deckbuilding"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: End Users/Desktop",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Games/Entertainment",
+]
+dependencies = [
+  "pandas",
+  "requests",
+]
+
+[project.optional-dependencies]
+edhrec = ["pyedhrec"]
+dev = []
+
+[project.scripts]
+mtg-analyze-collection = "analyze_collection:main"
+mtg-build-commander-deck = "build_commander_deck:main"
+mtg-collection = "mtg_collection_cli:main"
+mtg-compare-decks = "compare_decks:main"
+mtg-enrich-edhrec = "enrich_edhrec_optional:main"
+mtg-enrich-scryfall = "enrich_scryfall:main"
+mtg-export-deck-text = "export_deck_text:main"
+mtg-generate-deck-draft = "generate_deck_draft:main"
+mtg-generate-deck-viewer = "generate_deck_viewer:main"
+mtg-identify-commanders = "identify_commanders:main"
+mtg-export-deck-manabox = "export_deck_manabox:main"
+mtg-import-manabox-deck = "import_manabox_deck:main"
+mtg-tune-deck = "tune_deck:main"
+mtg-validate-deck = "validate_deck:main"
+
+[project.urls]
+Homepage = "https://github.com/YOUR-USERNAME/mtg_collection"
+Issues = "https://github.com/YOUR-USERNAME/mtg_collection/issues"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+py-modules = [
+  "analyze_collection",
+  "build_commander_deck",
+  "compare_decks",
+  "deck_diff",
+  "deck_generation",
+  "deck_text_export",
+  "deck_providers",
+  "deck_tuning",
+  "deck_validation",
+  "enrich_edhrec_optional",
+  "enrich_scryfall",
+  "deck_io",
+  "export_deck_manabox",
+  "export_deck_text",
+  "generate_deck_draft",
+  "generate_deck_viewer",
+  "import_manabox_deck",
+  "identify_commanders",
+  "mtg_collection_utils",
+  "mtg_collection_cli",
+  "tune_deck",
+  "validate_deck",
+]

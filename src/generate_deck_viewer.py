@@ -437,10 +437,19 @@ def build_deck_cards(deck_path: str, collection_lookup: dict[str, dict]) -> tupl
 
     for card in deck["cards"]:
         name = card["name"]
-        if name not in collection_lookup:
-            raise ValueError(f"Card not found in collection CSV: {name}")
-
-        merged = dict(collection_lookup[name])
+        if name in collection_lookup:
+            merged = dict(collection_lookup[name])
+        else:
+            merged = {
+                "name": name,
+                "mana_cost": str(card.get("mana_cost", "")),
+                "type_line": str(card.get("type_line", card.get("category", ""))),
+                "oracle_text": str(card.get("oracle_text", "")),
+                "color_identity": str(card.get("color_identity", "")),
+                "scryfall_url": card.get("scryfall_url", build_scryfall_search_url(name)),
+                "cardmarket_url": card.get("cardmarket_url", build_cardmarket_search_url(name)),
+                "image_url": card.get("image_url", ""),
+            }
         merged["category"] = card["category"]
         merged["count"] = int(card.get("count", 1))
         merged["tags"] = derive_tags(merged)
@@ -966,6 +975,32 @@ def render_html(deck_name: str, cards: list[dict], refinement: dict) -> str:
       display: block;
       margin-bottom: 4px;
     }}
+    .validation-status {{
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }}
+    .validation-status.pass {{
+      color: #14532d;
+      background: #dcfce7;
+    }}
+    .validation-status.fail {{
+      color: #7f1d1d;
+      background: #fee2e2;
+    }}
+    .validation-issue.error {{
+      border-left: 3px solid #b91c1c;
+      padding-left: 10px;
+    }}
+    .validation-issue.warning {{
+      border-left: 3px solid #b45309;
+      padding-left: 10px;
+    }}
     @media (max-width: 980px) {{
       .layout {{
         grid-template-columns: 1fr;
@@ -1413,6 +1448,47 @@ def render_html(deck_name: str, cards: list[dict], refinement: dict) -> str:
       const cutCandidates = Array.isArray(refinement.cut_candidates) ? refinement.cut_candidates : [];
       const upgradeSuggestions = Array.isArray(refinement.upgrade_suggestions) ? refinement.upgrade_suggestions : [];
       const legalityWarnings = Array.isArray(refinement.legality_warnings) ? refinement.legality_warnings : [];
+      const qualityNotes = Array.isArray(refinement.quality_notes) ? refinement.quality_notes : [];
+      const validationReport = refinement.validation_report && typeof refinement.validation_report === 'object'
+        ? refinement.validation_report
+        : null;
+
+      if (validationReport) {{
+        const errors = Array.isArray(validationReport.errors) ? validationReport.errors : [];
+        const warnings = Array.isArray(validationReport.warnings) ? validationReport.warnings : [];
+        const roleCounts = validationReport.role_counts && typeof validationReport.role_counts === 'object'
+          ? Object.entries(validationReport.role_counts)
+          : [];
+        sections.push(`
+          <div class="refinement-group">
+            <h4>Validation Report</h4>
+            <div class="validation-status ${{validationReport.ok ? 'pass' : 'fail'}}">
+              ${{validationReport.ok ? 'PASS' : 'FAIL'}} · ${{escapeHtml(String(validationReport.total_cards || 'Unknown'))}} cards
+            </div>
+            ${{errors.length ? `
+              <div class="meta"><strong>Errors</strong></div>
+              ${{errors.map((item) => `
+                <div class="refinement-item validation-issue error">
+                  <strong>${{escapeHtml(item.code || 'error')}}${{item.card_name ? ` · ${{escapeHtml(item.card_name)}}` : ''}}</strong>
+                  <div class="meta">${{escapeHtml(item.message || '')}}</div>
+                </div>
+              `).join('')}}
+            ` : ''}}
+            ${{warnings.length ? `
+              <div class="meta"><strong>Warnings</strong></div>
+              ${{warnings.map((item) => `
+                <div class="refinement-item validation-issue warning">
+                  <strong>${{escapeHtml(item.code || 'warning')}}${{item.card_name ? ` · ${{escapeHtml(item.card_name)}}` : ''}}</strong>
+                  <div class="meta">${{escapeHtml(item.message || '')}}</div>
+                </div>
+              `).join('')}}
+            ` : ''}}
+            ${{roleCounts.length ? `
+              <div class="meta"><strong>Role counts:</strong> ${{roleCounts.map(([role, count]) => `${{escapeHtml(role)}} ${{escapeHtml(String(count))}}`).join(' · ')}}</div>
+            ` : ''}}
+          </div>
+        `);
+      }}
 
       if (legalityWarnings.length) {{
         sections.push(`
@@ -1422,6 +1498,20 @@ def render_html(deck_name: str, cards: list[dict], refinement: dict) -> str:
               <div class="refinement-item">
                 <strong>${{escapeHtml(item.name)}}</strong>
                 <div class="meta">Color identity: ${{escapeHtml(item.color_identity)}}. This card is outside the commander's allowed colors.</div>
+              </div>
+            `).join('')}}
+          </div>
+        `);
+      }}
+
+      if (qualityNotes.length) {{
+        sections.push(`
+          <div class="refinement-group">
+            <h4>Draft Quality Notes</h4>
+            ${{qualityNotes.map((item) => `
+              <div class="refinement-item">
+                <strong>${{escapeHtml(item.name)}}</strong>
+                <div class="meta">${{escapeHtml(item.reason)}}</div>
               </div>
             `).join('')}}
           </div>
