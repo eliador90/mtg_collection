@@ -49,14 +49,14 @@ jobs:
       - name: Check deck utility commands
         run: |
           python src/export_deck_text.py \
-            --deck data/output/sample_generated_deck.json \
+            --deck data/output/sample_generated/sample_generated_deck.json \
             --output data/output/sample_generated_decklist.txt
           python src/compare_decks.py \
-            --old data/output/sample_generated_deck.json \
+            --old data/output/sample_generated/sample_generated_deck.json \
             --new data/output/sample_generated_imported.json \
             --json-output data/output/sample_generated_diff.json
           python src/tune_deck.py \
-            --deck data/output/sample_generated_deck.json \
+            --deck data/output/sample_generated/sample_generated_deck.json \
             --collection data/sample/collection_enriched_sample.csv \
             --output data/output/sample_generated_tuning.json \
             --max-suggestions 3
@@ -75,6 +75,6 @@ jobs:
             --manabox \
             --text
           mtg-collection review \
-            --deck data/output/sample_wrapper_deck.json \
+            --folder data/output/sample_wrapper \
             --collection data/sample/collection_enriched_sample.csv \
             --max-suggestions 3

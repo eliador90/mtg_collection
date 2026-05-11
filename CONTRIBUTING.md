@@ -59,6 +59,8 @@ mtg-build-commander-deck \
   --target-size 8
 ```
 
+This writes files under `data/output/sample_generated/`, including `sample_generated_deck.json`.
+
 ## Pull Request Guidelines
 
 - Keep changes focused.
